@@ -1,35 +1,69 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useRef, useState } from "react";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const worker = useRef<Worker | null>(null);
+  const [message, setMessage] = useState("");
+  const [response, setResponse] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const sendMessage = () => {
+    if (!message.trim()) return;
+
+    setIsLoading(true);
+    setResponse("");
+
+    worker.current?.postMessage({
+      message: message,
+    });
+  };
+
+  useEffect(() => {
+    worker.current ??= new Worker(new URL("./worker.ts", import.meta.url), {
+      type: "module",
+    });
+
+    const onMessageReceived = (e: MessageEvent) => {
+      console.log("Received message:", e.data); // Debug incoming messages
+
+      if (e.data.status === "complete") {
+        setResponse(e.data.output);
+        setIsLoading(false);
+      } else if (e.data.status === "error") {
+        const errorMessage = e.data.error || "Unknown error occurred";
+        console.error("Error details:", errorMessage);
+        setResponse(`Error: ${errorMessage}`);
+        setIsLoading(false);
+      } else if (e.data.progress) {
+        // Handle model loading progress
+        console.log("Loading progress:", e.data.progress);
+      }
+    };
+
+    worker.current.addEventListener("message", onMessageReceived);
+
+    return () =>
+      worker.current?.removeEventListener("message", onMessageReceived);
+  }, []);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div>
+      <input
+        type="text"
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        placeholder="Type a message..."
+      />
+      <button onClick={sendMessage} disabled={isLoading}>
+        {isLoading ? "Generating..." : "Send"}
+      </button>
+      {response && (
+        <div>
+          <h3>Response:</h3>
+          <p>{response}</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
-export default App
+export default App;
