@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CreateWebWorkerMLCEngine, MLCEngineInterface } from "@mlc-ai/web-llm";
-import ReactMarkdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from 'prism-react-renderer';
-import { themes } from 'prism-react-renderer';
+import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 export default function ChatPage() {
   const [message, setMessage] = useState("");
@@ -29,9 +27,10 @@ export default function ChatPage() {
   // Track scroll position to determine if auto-scroll should happen
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const element = e.currentTarget;
-    const isAtBottom = Math.abs(
-      element.scrollHeight - element.scrollTop - element.clientHeight
-    ) < 50;
+    const isAtBottom =
+      Math.abs(
+        element.scrollHeight - element.scrollTop - element.clientHeight
+      ) < 50;
     shouldScrollRef.current = isAtBottom;
   };
 
@@ -137,98 +136,7 @@ export default function ChatPage() {
               }`}
             >
               {msg.role === "assistant" ? (
-                <ReactMarkdown
-                  className="prose prose-sm max-w-none dark:prose-invert prose-pre:p-0"
-                  components={{
-                    // Style code blocks and inline code
-                    code({ node, inline, className, children, ...props }) {
-                      const match = /language-(\w+)/.exec(className || '');
-                      const language = match ? match[1] : '';
-                      
-                      if (inline) {
-                        return (
-                          <code className="px-1 py-0.5 rounded-md bg-gray-200 text-gray-800 text-sm" {...props}>
-                            {children}
-                          </code>
-                        );
-                      }
-
-                      return (
-                        <div className="rounded-lg overflow-hidden my-2">
-                          <SyntaxHighlighter
-                            {...props}
-                            style={themes.oneDark}
-                            language={language}
-                            PreTag="div"
-                            customStyle={{
-                              margin: 0,
-                              borderRadius: '0.5rem',
-                              background: '#282c34',
-                            }}
-                          >
-                            {String(children).replace(/\n$/, '')}
-                          </SyntaxHighlighter>
-                        </div>
-                      );
-                    },
-                    // Style headings
-                    h1: ({ children }) => (
-                      <h1 className="text-2xl font-bold mb-4 mt-6">{children}</h1>
-                    ),
-                    h2: ({ children }) => (
-                      <h2 className="text-xl font-bold mb-3 mt-5">{children}</h2>
-                    ),
-                    h3: ({ children }) => (
-                      <h3 className="text-lg font-bold mb-2 mt-4">{children}</h3>
-                    ),
-                    // Style lists
-                    ul: ({ children }) => (
-                      <ul className="list-disc list-inside mb-4 space-y-1">{children}</ul>
-                    ),
-                    ol: ({ children }) => (
-                      <ol className="list-decimal list-inside mb-4 space-y-1">{children}</ol>
-                    ),
-                    // Style links
-                    a: ({ children, href }) => (
-                      <a 
-                        href={href}
-                        className="text-blue-600 hover:text-blue-800 underline"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {children}
-                      </a>
-                    ),
-                    // Style blockquotes
-                    blockquote: ({ children }) => (
-                      <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4">
-                        {children}
-                      </blockquote>
-                    ),
-                    // Style paragraphs
-                    p: ({ children }) => (
-                      <p className="mb-4 last:mb-0">{children}</p>
-                    ),
-                    // Style tables
-                    table: ({ children }) => (
-                      <div className="overflow-x-auto my-4">
-                        <table className="min-w-full divide-y divide-gray-300">
-                          {children}
-                        </table>
-                      </div>
-                    ),
-                    th: ({ children }) => (
-                      <th className="px-3 py-2 bg-gray-100 font-semibold text-left">
-                        {children}
-                      </th>
-                    ),
-                    td: ({ children }) => (
-                      <td className="px-3 py-2 border-t">{children}</td>
-                    ),
-                  }}
-                >
-                  {msg.content}
-                </ReactMarkdown>
+                <MarkdownRenderer content={msg.content} />
               ) : (
                 <p className="whitespace-pre-wrap">{msg.content}</p>
               )}
