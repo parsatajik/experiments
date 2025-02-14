@@ -8,6 +8,7 @@ import { chatModels } from "@/lib/models";
 import { useChat } from "@/hooks/use-chat";
 import { db } from "@/lib/db";
 import Cookies from "js-cookie";
+import { Messages } from "@/components/messages";
 
 export default function ChatPage() {
   const { chatId } = useParams();
@@ -136,34 +137,7 @@ export default function ChatPage() {
         onUpdateTitle={updateTitle}
       />
 
-      <div
-        className="flex-1 overflow-y-auto p-4 space-y-4"
-        onScroll={handleScroll}
-      >
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${
-              msg.role === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
-            <div
-              className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                msg.role === "user"
-                  ? "bg-primary text-secondary"
-                  : "bg-white text-gray-800 border"
-              }`}
-            >
-              {msg.role === "assistant" ? (
-                <MarkdownRenderer content={msg.content} />
-              ) : (
-                <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
-              )}
-            </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
+      <Messages messages={messages} isLoading={isLoading} />
 
       <div className="mx-auto px-4 bg-background pb-4 md:pb-6 w-full md:max-w-3xl">
         <MultimodalInput
