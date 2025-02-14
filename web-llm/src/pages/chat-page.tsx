@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CreateWebWorkerMLCEngine, MLCEngineInterface } from "@mlc-ai/web-llm";
-import MarkdownRenderer from "@/components/MarkdownRenderer";
+import MarkdownRenderer from "@/components/markdown-renderer";
 
 export default function ChatPage() {
   const [message, setMessage] = useState("");
