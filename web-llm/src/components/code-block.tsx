@@ -1,3 +1,5 @@
+"use client";
+
 import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import tsx from "react-syntax-highlighter/dist/cjs/languages/prism/tsx";
@@ -7,22 +9,19 @@ import python from "react-syntax-highlighter/dist/cjs/languages/prism/python";
 import { cn } from "@/lib/utils";
 
 // Register languages for syntax highlighting
-SyntaxHighlighter.registerLanguage('tsx', tsx);
-SyntaxHighlighter.registerLanguage('typescript', typescript);
-SyntaxHighlighter.registerLanguage('javascript', javascript);
-SyntaxHighlighter.registerLanguage('python', python);
+SyntaxHighlighter.registerLanguage("tsx", tsx);
+SyntaxHighlighter.registerLanguage("typescript", typescript);
+SyntaxHighlighter.registerLanguage("javascript", javascript);
+SyntaxHighlighter.registerLanguage("python", python);
 
 interface CodeBlockProps {
   className?: string;
   children: any;
 }
 
-export function CodeBlock({
-  className,
-  children,
-}: CodeBlockProps) {
-  const match = /language-(\w+)/.exec(className || '');
-  const language = match ? match[1] : 'text';
+export function CodeBlock({ className, children }: CodeBlockProps) {
+  const match = /language-(\w+)/.exec(className || "");
+  const language = match ? match[1] : "text";
 
   return (
     <div className="not-prose relative">
@@ -31,7 +30,19 @@ export function CodeBlock({
       </div>
       <SyntaxHighlighter
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        style={oneDark as any}
+        style={
+          {
+            ...oneDark,
+            'pre[class*="language-"]': {
+              ...oneDark['pre[class*="language-"]'],
+              background: "transparent",
+            },
+            'code[class*="language-"]': {
+              ...oneDark['code[class*="language-"]'],
+              background: "transparent",
+            },
+          } as any
+        }
         language={language}
         PreTag="div"
         className={cn(
@@ -42,8 +53,13 @@ export function CodeBlock({
           margin: 0,
           background: "transparent",
         }}
+        codeTagProps={{
+          style: {
+            background: "transparent",
+          },
+        }}
       >
-        {String(children).replace(/\n$/, '')}
+        {String(children).replace(/\n$/, "")}
       </SyntaxHighlighter>
     </div>
   );
