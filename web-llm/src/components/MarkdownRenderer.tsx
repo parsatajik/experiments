@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { oneDark as oneDarkStyle } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import tsx from "react-syntax-highlighter/dist/cjs/languages/prism/tsx";
 import typescript from "react-syntax-highlighter/dist/cjs/languages/prism/typescript";
 import javascript from "react-syntax-highlighter/dist/cjs/languages/prism/javascript";
@@ -35,10 +35,10 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
           return match ? (
             <div className="rounded-lg overflow-hidden">
               <SyntaxHighlighter
-                style={oneDark}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                style={oneDarkStyle as any}
                 language={match[1]}
                 PreTag="div"
-                {...props}
               >
                 {String(children).replace(/\n$/, '')}
               </SyntaxHighlighter>
