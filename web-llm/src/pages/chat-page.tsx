@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { CreateWebWorkerMLCEngine, MLCEngineInterface } from "@mlc-ai/web-llm";
+import { ChatHeader } from "@/components/chat-header";
 import MarkdownRenderer from "@/components/markdown-renderer";
+import { chatModels } from "@/lib/models";
+import Cookies from "js-cookie";
+import { MultimodalInput } from "@/components/multimodal-input";
 
 export default function ChatPage() {
   const [message, setMessage] = useState("");
@@ -12,6 +16,9 @@ export default function ChatPage() {
   const engineRef = useRef<MLCEngineInterface | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const shouldScrollRef = useRef(true);
+  const [selectedModelId, setSelectedModelId] = useState(() => {
+    return Cookies.get("selected-model") || chatModels[0].id;
+  });
 
   // Scroll only if user is at bottom of messages
   const scrollToBottom = () => {
@@ -35,6 +42,10 @@ export default function ChatPage() {
   };
 
   useEffect(() => {
+    Cookies.set("selected-model", selectedModelId, { expires: 365 });
+  }, [selectedModelId]);
+
+  useEffect(() => {
     async function initEngine() {
       try {
         setModelStatus("Initializing model...");
@@ -42,7 +53,7 @@ export default function ChatPage() {
           new Worker(new URL("../worker-v2.ts", import.meta.url), {
             type: "module",
           }),
-          "Llama-3.2-1B-Instruct-q4f32_1-MLC",
+          selectedModelId,
           {
             initProgressCallback: (progress) => {
               setModelStatus(
@@ -60,7 +71,7 @@ export default function ChatPage() {
     }
 
     initEngine();
-  }, []);
+  }, [selectedModelId]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,11 +121,15 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      {/* Status bar */}
-      <div className="bg-white border-b px-4 py-2 text-sm text-gray-600">
-        {modelStatus}
-      </div>
+    <div className="flex flex-col min-w-0 h-dvh bg-background">
+      <ChatHeader
+        selectedModelId={selectedModelId}
+        onModelSelect={(id) => {
+          setSelectedModelId(id);
+          setMessages([]);
+        }}
+        modelStatus={modelStatus}
+      />
 
       {/* Messages container */}
       <div
@@ -131,14 +146,14 @@ export default function ChatPage() {
             <div
               className={`max-w-[80%] rounded-lg px-4 py-2 ${
                 msg.role === "user"
-                  ? "bg-blue-500 text-white"
+                  ? "bg-primary text-secondary"
                   : "bg-white text-gray-800 border"
               }`}
             >
               {msg.role === "assistant" ? (
                 <MarkdownRenderer content={msg.content} />
               ) : (
-                <p className="whitespace-pre-wrap">{msg.content}</p>
+                <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
               )}
             </div>
           </div>
@@ -147,25 +162,15 @@ export default function ChatPage() {
       </div>
 
       {/* Input form */}
-      <form onSubmit={sendMessage} className="border-t bg-white p-4">
-        <div className="flex space-x-4">
-          <input
-            type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isLoading || !engineRef.current}
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !engineRef.current || !message.trim()}
-            className="rounded-lg bg-blue-500 px-6 py-2 text-white hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            {isLoading ? "..." : "Send"}
-          </button>
-        </div>
-      </form>
+      <div className="mx-auto px-4 bg-background pb-4 md:pb-6 w-full md:max-w-3xl">
+        <MultimodalInput
+          input={message}
+          setInput={setMessage}
+          isLoading={isLoading}
+          onSubmit={sendMessage}
+          disabled={!engineRef.current}
+        />
+      </div>
     </div>
   );
 }
