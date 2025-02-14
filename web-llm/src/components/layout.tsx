@@ -18,17 +18,17 @@ export default function Layout() {
   }, [isCollapsed]);
 
   return (
-    <>
+    <div className="flex h-screen">
       <SidebarProvider
         defaultOpen={!isCollapsed}
         onOpenChange={(open) => setIsCollapsed(!open)}
       >
         <AppSidebar user={null} />
-        <SidebarInset>
+        <SidebarInset className="flex-1">
           <Outlet />
         </SidebarInset>
       </SidebarProvider>
       <Toaster />
-    </>
+    </div>
   );
 }

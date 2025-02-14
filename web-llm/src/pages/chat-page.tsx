@@ -1,37 +1,49 @@
 import { useEffect, useRef, useState } from "react";
+import { useParams, useNavigate } from "react-router";
 import { CreateWebWorkerMLCEngine, MLCEngineInterface } from "@mlc-ai/web-llm";
 import { ChatHeader } from "@/components/chat-header";
+import { MultimodalInput } from "@/components/multimodal-input";
 import MarkdownRenderer from "@/components/markdown-renderer";
 import { chatModels } from "@/lib/models";
+import { useChat } from "@/hooks/use-chat";
+import { db } from "@/lib/db";
 import Cookies from "js-cookie";
-import { MultimodalInput } from "@/components/multimodal-input";
 
 export default function ChatPage() {
+  const { chatId } = useParams();
+  const navigate = useNavigate();
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<
-    Array<{ role: string; content: string }>
-  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modelStatus, setModelStatus] = useState<string>("");
   const engineRef = useRef<MLCEngineInterface | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const shouldScrollRef = useRef(true);
+
   const [selectedModelId, setSelectedModelId] = useState(() => {
     return Cookies.get("selected-model") || chatModels[0].id;
   });
 
-  // Scroll only if user is at bottom of messages
-  const scrollToBottom = () => {
+  const { chat, messages, addMessage, updateMessageStream, updateTitle } =
+    useChat(chatId || "");
+
+  // Create new chat if we don't have a chatId
+  useEffect(() => {
+    async function createNewChat() {
+      if (!chatId) {
+        const newChat = await db.createChat(selectedModelId);
+        navigate(`/chat/${newChat.id}`);
+      }
+    }
+    createNewChat();
+  }, [chatId, navigate, selectedModelId]);
+
+  // Scroll handling
+  useEffect(() => {
     if (shouldScrollRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  };
-
-  useEffect(() => {
-    scrollToBottom();
   }, [messages]);
 
-  // Track scroll position to determine if auto-scroll should happen
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const element = e.currentTarget;
     const isAtBottom =
@@ -41,10 +53,7 @@ export default function ChatPage() {
     shouldScrollRef.current = isAtBottom;
   };
 
-  useEffect(() => {
-    Cookies.set("selected-model", selectedModelId, { expires: 365 });
-  }, [selectedModelId]);
-
+  // Model initialization
   useEffect(() => {
     async function initEngine() {
       try {
@@ -75,46 +84,39 @@ export default function ChatPage() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !engineRef.current) return;
+    if (!message.trim() || !engineRef.current || !chat) return;
 
-    const userMessage = { role: "user", content: message };
-    setMessages((prev) => [
-      ...prev,
-      userMessage,
-      { role: "assistant", content: "" },
-    ]);
+    // Add user message immediately
+    const userMessage = await addMessage("user", message);
     setMessage("");
     setIsLoading(true);
-    shouldScrollRef.current = true; // Force scroll on new message
+    shouldScrollRef.current = true;
 
     try {
+      const chatHistory = [...messages, userMessage].map((msg) => ({
+        role: msg!.role as "user" | "assistant",
+        content: msg!.content,
+      }));
+
       const response = await engineRef.current.chat.completions.create({
-        messages: [...messages, userMessage],
+        messages: chatHistory,
         temperature: 0.7,
         max_tokens: 500,
         stream: true,
       });
 
-      // Handle streaming response
       let fullContent = "";
       for await (const chunk of response) {
         const content = chunk.choices[0]?.delta?.content || "";
         fullContent += content;
-        setMessages((prev) => {
-          const newMessages = [...prev];
-          const lastMessage = newMessages[newMessages.length - 1];
-          lastMessage.content = fullContent; // Replace entire content instead of appending
-          return newMessages;
-        });
+        // Update UI with streaming content
+        updateMessageStream(fullContent);
       }
+      // Persist the complete message
+      await addMessage("assistant", fullContent);
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages((prev) => {
-        const newMessages = [...prev];
-        newMessages[newMessages.length - 1].content =
-          "Error: Failed to generate response";
-        return newMessages;
-      });
+      await addMessage("assistant", "Error: Failed to generate response");
     } finally {
       setIsLoading(false);
     }
@@ -124,21 +126,23 @@ export default function ChatPage() {
     <div className="flex flex-col min-w-0 h-dvh bg-background">
       <ChatHeader
         selectedModelId={selectedModelId}
-        onModelSelect={(id) => {
+        onModelSelect={async (id) => {
           setSelectedModelId(id);
-          setMessages([]);
+          const newChat = await db.createChat(id);
+          navigate(`/chat/${newChat.id}`);
         }}
         modelStatus={modelStatus}
+        title={chat?.title || "New Chat"}
+        onUpdateTitle={updateTitle}
       />
 
-      {/* Messages container */}
       <div
         className="flex-1 overflow-y-auto p-4 space-y-4"
         onScroll={handleScroll}
       >
-        {messages.map((msg, index) => (
+        {messages.map((msg) => (
           <div
-            key={index}
+            key={msg.id}
             className={`flex ${
               msg.role === "user" ? "justify-end" : "justify-start"
             }`}
@@ -161,7 +165,6 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input form */}
       <div className="mx-auto px-4 bg-background pb-4 md:pb-6 w-full md:max-w-3xl">
         <MultimodalInput
           input={message}

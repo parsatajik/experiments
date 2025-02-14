@@ -18,6 +18,11 @@ export function AppSidebar({ user }: { user: any }) {
   const navigate = useNavigate();
   const { setOpenMobile } = useSidebar();
 
+  const handleNewChat = () => {
+    setOpenMobile(false);
+    navigate("/chat");
+  };
+
   return (
     <Sidebar className="group-data-[side=left]:border-r-0">
       <SidebarHeader>
@@ -40,11 +45,7 @@ export function AppSidebar({ user }: { user: any }) {
                   variant="ghost"
                   type="button"
                   className="p-2 h-fit"
-                  onClick={() => {
-                    setOpenMobile(false);
-                    navigate("/");
-                    navigate(0);
-                  }}
+                  onClick={handleNewChat}
                 >
                   <PlusIcon />
                 </Button>
@@ -54,9 +55,9 @@ export function AppSidebar({ user }: { user: any }) {
           </div>
         </SidebarMenu>
       </SidebarHeader>
-      {/* <SidebarContent>
-        <SidebarHistory user={user} />
-      </SidebarContent> */}
+      <SidebarContent>
+        <SidebarHistory />
+      </SidebarContent>
       <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
     </Sidebar>
   );
